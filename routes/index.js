@@ -1,29 +1,53 @@
 const express = require('express');
 const os = require('os');
-const fs = require('fs');
 const multer = require('multer');
-const { parseCsvToJson } = require('../util');
+const csv = require("csvtojson/v2");
 const router = express.Router();
 const upload = multer({ dest: os.tmpdir() });
 
-/*
-  Receives two CSV files in the form of JSON
-  File 1 has Columns A, B
-  File 2 has Columns A, C, D
-  Data in files 1 and 2 are related via Column A
-  Returns a CSV that has Columns A, B, C, D
-*/
+const csvToJson = async (files) => {
+  const jsonArr = files.map(async (file) => {
+    return await csv().fromFile(file.path);
+  });
+  return await Promise.all(jsonArr);
+};
 
-router.post('/convert', upload.array('csvFiles', 2), async (req, res) => {
+const filterJson = (json) => {
+  return json.map((obj) => {
+    return Object.fromEntries(Object.entries(obj).filter(([_, o]) => o != ''));
+  });
+};
+
+function convertToCSV(arr) {
+  const arr2 = [Object.keys(arr[0])].concat(arr);
+  return arr2.map((obj) => {
+    return Object.values(obj).toString();
+  }).join('\n');
+};
+
+router.post('/convert', upload.array('csvFiles'), async (req, res) => {
   try {
-    const { csvFiles } = req;
-    const fileData = fs.readFileSync(csvFiles.path);
-    const JSON = await parseCsvToJson(fileData);
-    res.status(200).json({ JSON });
-
-  } catch (err) {
-    const { message } = err;
-    return res.status(400).json({ message });
+    const { files } = req;
+    const { ref1, ref2 } = req.body;
+    const json = await csvToJson(files);
+    const filteredArr = json.map((obj) => {
+      return filterJson(obj);
+    });
+    const sortedArr = filteredArr.sort((a, b) => {
+      return Object.values(a[0]).length - Object.values(b[0]).length;
+    });
+    const dictObj = {};
+    sortedArr[1].forEach((obj) => {
+      dictObj[obj[ref1]] = obj[ref2];
+    });
+    const resFile = sortedArr[0].map((obj) => {
+      console.log(dictObj[obj[ref1]]);
+      return { ...obj, [ref2]: dictObj[obj[ref1]] };
+    });
+    const data = convertToCSV(resFile);
+    return res.status(200).json({ data });
+  } catch (e) {
+    return res.status(400);
   }
 });
 
