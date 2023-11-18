@@ -17,12 +17,15 @@ router.post('/convert', upload.array('csvFiles'), async (req, res) => {
     const sortedArr = filteredArr.sort((a, b) => {
       return Object.values(a[0]).length - Object.values(b[0]).length;
     });
-    const fuz = new Fuse(sortedArr[1], {
-      keys: [ref1, ref2],
-    });
+    const options = {
+      includeScore: true,
+      threshold: 0.2,
+      keys: [ref1, ref2]
+    }
+    const fuz = new Fuse(sortedArr[1], options);
     const resFile = sortedArr[0].map((obj) => {
       const fuzObj = fuz.search(obj[ref1]);
-      return { ...obj, [ref2]: fuzObj[0].item[ref2] };
+      return { ...obj, [ref2]: fuzObj?.[0]?.item?.[ref2] };
     });
     const data = convertToCsv(resFile);
     return res.status(200).json({ data });
