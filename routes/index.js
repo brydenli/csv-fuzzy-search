@@ -6,7 +6,7 @@ const upload = multer({ dest: os.tmpdir() });
 const Fuse = require('fuse.js')
 const { csvToJson, filterJson, convertToCsv } = require('../util');
 
-router.post('/convert', upload.array('csvFiles'), async (req, res) => {
+router.post('/', upload.array('csvFiles'), async (req, res) => {
   try {
     const { files } = req;
     const { ref1, ref2 } = req.body;
