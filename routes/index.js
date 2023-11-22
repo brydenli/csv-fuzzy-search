@@ -9,7 +9,7 @@ const { csvToJson, filterJson, convertToCsv } = require('../util');
 router.post('/', upload.array('csvFiles'), async (req, res) => {
   try {
     const { files } = req;
-    const { ref1, ref2 } = req.body;
+    const { ref1, ref2, threshold } = req.body;
     const json = await csvToJson(files);
     const filteredArr = json.map((obj) => {
       return filterJson(obj);
@@ -19,7 +19,7 @@ router.post('/', upload.array('csvFiles'), async (req, res) => {
     });
     const options = {
       includeScore: true,
-      threshold: 0.2,
+      threshold,
       keys: [ref1, ref2]
     }
     const fuz = new Fuse(sortedArr[1], options);
